@@ -34,8 +34,8 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        conv = minitorch.conv1d(input, self.weights.value)
+        return conv + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -61,15 +61,29 @@ class CNNSentimentKim(minitorch.Module):
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.dropout = dropout
+        
+        # Use list comprehension for cleaner conv layer creation
+        self.convs = [
+            Conv1d(embedding_size, feature_map_size, size) 
+            for size in filter_sizes
+        ]
+        self.linear = Linear(feature_map_size, 1)
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Prepare input for convolution
+        x = embeddings.permute(0, 2, 1)
+        
+        # Apply convolutions and pool features in one line
+        h = sum(minitorch.nn.max(conv(x).relu(), 2) for conv in self.convs)
+        
+        # Final classification layers
+        h = self.linear(h.view(h.shape[0], self.feature_map_size))
+        h = minitorch.nn.dropout(h, self.dropout)
+        return h.sigmoid().view(h.shape[0])
 
 
 # Evaluation helper methods
