@@ -1,4 +1,5 @@
 import time
+import os
 
 import embeddings
 import pandas as pd
@@ -10,6 +11,9 @@ from run_sentiment import SentenceSentimentTrain
 from datasets import load_dataset
 
 EMBEDDING_SIZE = 50
+
+if 'HOME' not in os.environ:
+    os.environ['HOME'] = os.environ['USERPROFILE']
 
 
 def predictions_dataframe(predictions, sentences):
