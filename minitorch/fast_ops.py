@@ -30,6 +30,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """JIT compile a function."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -168,7 +169,22 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # TODO: Implement for Task 3.1.
+        if list(in_shape) == list(out_shape) and list(in_strides) == list(out_strides):
+            for i in prange(len(out)):
+                out[i] = fn(in_storage[i])
+        else:
+            for i in prange(len(out)):
+                in_i = np.empty(MAX_DIMS, np.int32)
+                out_i = np.empty(MAX_DIMS, np.int32)
+
+                to_index(i, out_shape, out_i)
+                broadcast_index(out_i, out_shape, in_shape, in_i)
+
+                out_pos = index_to_position(out_i, out_strides)
+                in_pos = index_to_position(in_i, in_strides)
+
+                out[out_pos] = fn(in_storage[in_pos])
 
     return njit(_map, parallel=True)  # type: ignore
 
@@ -207,7 +223,28 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # TODO: Implement for Task 3.1.
+        if list(a_strides) == list(b_strides) == list(out_strides) and list(
+            a_shape
+        ) == list(b_shape) == list(out_shape):
+            for i in prange(len(out)):
+                out[i] = fn(a_storage[i], b_storage[i])
+
+        else:
+            for i in prange(len(out)):
+                out_i: Index = np.empty(MAX_DIMS, np.int32)
+                a_i: Index = np.empty(MAX_DIMS, np.int32)
+                b_i: Index = np.empty(MAX_DIMS, np.int32)
+
+                to_index(i, out_shape, out_i)
+                broadcast_index(out_i, out_shape, a_shape, a_i)
+                broadcast_index(out_i, out_shape, b_shape, b_i)
+
+                out_pos = index_to_position(out_i, out_strides)
+                a_pos = index_to_position(a_i, a_strides)
+                b_pos = index_to_position(b_i, b_strides)
+
+                out[out_pos] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return njit(_zip, parallel=True)  # type: ignore
 
@@ -242,7 +279,22 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        raise NotImplementedError("Need to include this file from past assignment.")
+        # TODO: Implement for Task 3.1.
+        reduce_size = a_shape[reduce_dim]
+        reduce_stride = a_strides[reduce_dim]
+        for i in prange(len(out)):
+            out_i = np.empty(MAX_DIMS, np.int32)
+
+            to_index(i, out_shape, out_i)
+
+            out_pos = index_to_position(out_i, out_strides)
+            a_pos = index_to_position(out_i, a_strides)
+
+            temp = out[out_pos]
+            for _ in range(reduce_size):
+                temp = fn(temp, a_storage[a_pos])
+                a_pos += reduce_stride
+            out[out_pos] = temp
 
     return njit(_reduce, parallel=True)  # type: ignore
 
@@ -293,7 +345,28 @@ def _tensor_matrix_multiply(
     a_batch_stride = a_strides[0] if a_shape[0] > 1 else 0
     b_batch_stride = b_strides[0] if b_shape[0] > 1 else 0
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    # TODO: Implement for Task 3.2.
+    row_a = a_strides[2]
+    col_b = b_strides[1]
+    blocks = a_shape[-1]
+
+    for row_i in prange(0, out_shape[0]):
+        for col_j in range(0, out_shape[1]):
+            for block_k in range(0, out_shape[2]):
+                row_s = row_i * a_batch_stride + col_j * a_strides[1]
+                col_s = row_i * b_batch_stride + block_k * b_strides[2]
+
+                temp = 0.0
+                for _ in range(0, blocks):
+                    temp += a_storage[row_s] * b_storage[col_s]
+                    row_s += row_a
+                    col_s += col_b
+
+                out[
+                    row_i * out_strides[0]
+                    + col_j * out_strides[1]
+                    + block_k * out_strides[2]
+                ] = temp
 
 
 tensor_matrix_multiply = njit(_tensor_matrix_multiply, parallel=True)
