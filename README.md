@@ -41,5 +41,6 @@ The files that will be synced are:
 
 Number of training samples: 10000
 Learning rate: 0.001
+Number of epochs: 5
 
 Training log: [mnist.txt](mnist.txt)

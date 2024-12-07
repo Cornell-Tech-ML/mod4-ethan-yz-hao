@@ -1,6 +1,7 @@
 python project/run_mnist_multiclass.py
 Number of training samples: 10000
 Learning rate: 0.001
+Number of epochs: 5
 Epoch 1 loss 2.3223912229319454 valid acc 1/16
 Epoch 1 loss 11.519046412895282 valid acc 2/16
 Epoch 1 loss 11.579494770804615 valid acc 1/16
