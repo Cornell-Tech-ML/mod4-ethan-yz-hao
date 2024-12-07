@@ -87,7 +87,7 @@ max_reduce = FastOps.reduce(operators.max, -1e9)
 def argmax(input: Tensor, dim: int) -> Tensor:
     """Compute the argmax as a 1-hot tensor"""
     max_values = max_reduce(input, dim)
-    return (input == max_values).float()
+    return input == max_values
 
 
 # TODO: Implement for Task 4.4.
