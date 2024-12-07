@@ -39,21 +39,25 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     # Calculate new dimensions
     new_height = height // kh
     new_width = width // kw
-    
+
     # Step 1: Move width before height and reshape
     # batch x channel x height x width -> batch x channel x width x height
     # -> batch x channel x new_width x kw x height
-    tiled = (input.permute(0, 1, 3, 2)
-                 .contiguous()
-                 .view(batch, channel, new_width, kw, height))
-    
+    tiled = (
+        input.permute(0, 1, 3, 2)
+        .contiguous()
+        .view(batch, channel, new_width, kw, height)
+    )
+
     # Step 2: Split height and rearrange to final shape
     # -> batch x channel x new_height x new_width x (kh * kw)
-    tiled = (tiled.view(batch, channel, new_width, kw, new_height, kh)
-                 .permute(0, 1, 4, 2, 5, 3)
-                 .contiguous()
-                 .view(batch, channel, new_height, new_width, kh * kw))
-    
+    tiled = (
+        tiled.view(batch, channel, new_width, kw, new_height, kh)
+        .permute(0, 1, 4, 2, 5, 3)
+        .contiguous()
+        .view(batch, channel, new_height, new_width, kh * kw)
+    )
+
     return tiled, new_height, new_width
 
 
@@ -64,9 +68,11 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     ----
         input: batch x channel x height x width
         kernel: height x width of pooling
+
     Returns:
     -------
         Pooled tensor of size batch x channel x new_height x new_width
+
     """
     # TODO: Implement for Task 4.3.
     batch, channel, height, width = input.shape
@@ -138,11 +144,11 @@ def dropout(input: Tensor, rate: float, ignore: bool = False) -> Tensor:
     """Dropout positions based on random noise"""
     if ignore:
         return input
-    
+
     # Handle edge case where rate = 1.0
     if rate >= 1.0:
         return input.zeros(input.shape)
-    
+
     prob_tensor = rand(input.shape).detach() > rate
     scale = 1.0 / (1.0 - rate)
     return input * prob_tensor * scale

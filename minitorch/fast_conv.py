@@ -7,8 +7,6 @@ from numba import njit as _njit
 from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
-    MAX_DIMS,
-    Index,
     Shape,
     Strides,
     Storage,
@@ -22,6 +20,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Numba JIT compile a function."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -95,26 +94,36 @@ def _tensor_conv1d(
         out_index = np.zeros(3, np.int32)
         in_index = np.zeros(3, np.int32)
         weight_index = np.zeros(3, np.int32)
-        
+
         to_index(out_pos, out_shape, out_index)
         batch_idx, out_channel, out_width = out_index
-        
+
         acc = 0.0
         for in_channel in range(in_channels):
             for k in range(kw):
                 # Calculate input width position based on reverse flag
                 in_width = out_width - k if reverse else out_width + k
-                
+
                 # Check bounds
                 if 0 <= in_width < width:
                     # Set indices
-                    weight_index[0], weight_index[1], weight_index[2] = out_channel, in_channel, k
-                    in_index[0], in_index[1], in_index[2] = batch_idx, in_channel, in_width
-                    
+                    weight_index[0], weight_index[1], weight_index[2] = (
+                        out_channel,
+                        in_channel,
+                        k,
+                    )
+                    in_index[0], in_index[1], in_index[2] = (
+                        batch_idx,
+                        in_channel,
+                        in_width,
+                    )
+
                     # Compute product
-                    acc += (input[index_to_position(in_index, input_strides)] * 
-                           weight[index_to_position(weight_index, weight_strides)])
-        
+                    acc += (
+                        input[index_to_position(in_index, s1)]
+                        * weight[index_to_position(weight_index, s2)]
+                    )
+
         out[index_to_position(out_index, out_strides)] = acc
 
 
@@ -151,6 +160,7 @@ class Conv1dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute the backward pass of a 1D Convolution."""
         input, weight = ctx.saved_values
         batch, in_channels, w = input.shape
         out_channels, in_channels, kw = weight.shape
@@ -239,19 +249,16 @@ def _tensor_conv2d(
 
     s1 = input_strides
     s2 = weight_strides
-    # inners
-    s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
-    s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
     for out_pos in prange(out_size):
         out_index = np.zeros(4, np.int32)
         in_index = np.zeros(4, np.int32)
         weight_index = np.zeros(4, np.int32)
-        
+
         to_index(out_pos, out_shape, out_index)
         batch_idx, out_channel, out_height, out_width = out_index
-        
+
         acc = 0.0
         for in_channel in range(in_channels):
             for k_h in range(kh):
@@ -259,21 +266,29 @@ def _tensor_conv2d(
                     # Calculate input positions based on reverse flag
                     in_height = out_height - k_h if reverse else out_height + k_h
                     in_width = out_width - k_w if reverse else out_width + k_w
-                    
+
                     # Check bounds for both height and width
                     if (0 <= in_height < height) and (0 <= in_width < width):
                         # Set indices
-                        weight_index[0], weight_index[1], weight_index[2], weight_index[3] = (
-                            out_channel, in_channel, k_h, k_w
-                        )
+                        (
+                            weight_index[0],
+                            weight_index[1],
+                            weight_index[2],
+                            weight_index[3],
+                        ) = (out_channel, in_channel, k_h, k_w)
                         in_index[0], in_index[1], in_index[2], in_index[3] = (
-                            batch_idx, in_channel, in_height, in_width
+                            batch_idx,
+                            in_channel,
+                            in_height,
+                            in_width,
                         )
-                        
+
                         # Compute product
-                        acc += (input[index_to_position(in_index, input_strides)] * 
-                               weight[index_to_position(weight_index, weight_strides)])
-        
+                        acc += (
+                            input[index_to_position(in_index, s1)]
+                            * weight[index_to_position(weight_index, s2)]
+                        )
+
         out[index_to_position(out_index, out_strides)] = acc
 
 
@@ -308,6 +323,7 @@ class Conv2dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute the backward pass of a 2D Convolution."""
         input, weight = ctx.saved_values
         batch, in_channels, h, w = input.shape
         out_channels, in_channels, kh, kw = weight.shape
