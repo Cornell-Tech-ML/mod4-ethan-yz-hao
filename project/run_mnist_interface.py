@@ -46,7 +46,7 @@ def render_run_image_interface():
         start_time = time.time()
         train = ImageTrain()
 
-        def log_fn(epoch, total_loss, correct, losses, model):
+        def log_fn(epoch, total_loss, correct, total, losses, model):
             time_elapsed = time.time() - start_time
             st_progress.progress(epoch / max_epochs)
             time_per_epoch = time_elapsed / (epoch + 1)
@@ -74,7 +74,7 @@ def render_run_image_interface():
             )
             st_epoch_plot.plotly_chart(fig)
             print(
-                f"Epoch: {epoch}/{max_epochs}, loss: {total_loss}, correct: {correct}"
+                f"Epoch: {epoch}/{max_epochs}, loss: {total_loss}, correct: {correct}/{total}"
             )
 
         train.train(
