@@ -1,11 +1,13 @@
 import random
-
+import os
 import embeddings
 
 import minitorch
 from datasets import load_dataset
 
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
+if 'HOME' not in os.environ:
+    os.environ['HOME'] = os.environ['USERPROFILE']
 
 
 def RParam(*shape):
@@ -34,8 +36,7 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        conv = minitorch.conv1d(input, self.weights.value)
-        return conv + self.bias.value
+        return minitorch.conv1d(input, self.weights.value) + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -61,28 +62,25 @@ class CNNSentimentKim(minitorch.Module):
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
+        # TODO: Implement for Task 4.5.
         self.dropout = dropout
-        
-        # Use list comprehension for cleaner conv layer creation
-        self.convs = [
-            Conv1d(embedding_size, feature_map_size, size) 
-            for size in filter_sizes
-        ]
-        self.linear = Linear(feature_map_size, 1)
+        self.conv1 = Conv1d(embedding_size, self.feature_map_size, filter_sizes[0])
+        self.conv2 = Conv1d(embedding_size, self.feature_map_size, filter_sizes[1])
+        self.conv3 = Conv1d(embedding_size, self.feature_map_size, filter_sizes[2])
+        self.linear = Linear(self.feature_map_size, 1)
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # Prepare input for convolution
+        # TODO: Implement for Task 4.5.
         x = embeddings.permute(0, 2, 1)
-        
-        # Apply convolutions and pool features in one line
-        h = sum(minitorch.nn.max(conv(x).relu(), 2) for conv in self.convs)
-        
-        # Final classification layers
+        h1 = self.conv1(x).relu()
+        h2 = self.conv2(x).relu()
+        h3 = self.conv3(x).relu()
+        h = minitorch.max(h1, 2) + minitorch.max(h2, 2) + minitorch.max(h3, 2)
         h = self.linear(h.view(h.shape[0], self.feature_map_size))
-        h = minitorch.nn.dropout(h, self.dropout)
+        h = minitorch.dropout(h, self.dropout)
         return h.sigmoid().view(h.shape[0])
 
 
@@ -216,6 +214,7 @@ def encode_sentences(
 ):
     Xs = []
     ys = []
+    print("Length of dataset", len(dataset["sentence"]))
     for sentence in dataset["sentence"][:N]:
         # pad with 0s to max sentence length in order to enable batching
         # TODO: move padding to training code
@@ -267,10 +266,10 @@ def encode_sentiment_data(dataset, pretrained_embeddings, N_train, N_val=0):
 
 
 if __name__ == "__main__":
-    train_size = 450
+    train_size = 2000
     validation_size = 100
     learning_rate = 0.01
-    max_epochs = 250
+    max_epochs = 25
 
     (X_train, y_train), (X_val, y_val) = encode_sentiment_data(
         load_dataset("glue", "sst2"),

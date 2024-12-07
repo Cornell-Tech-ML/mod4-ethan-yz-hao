@@ -1,4 +1,4 @@
-python project/run_mnist_multiclass.py
+> python project/run_mnist_multiclass.py
 Number of training samples: 10000
 Learning rate: 0.001
 Number of epochs: 5

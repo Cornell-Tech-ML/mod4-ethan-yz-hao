@@ -40,7 +40,20 @@ The files that will be synced are:
 ### MNIST Multiclass Classification
 
 Number of training samples: 10000
-Learning rate: 0.001
+
 Number of epochs: 5
 
+Learning rate: 0.001
+
 Training log: [mnist.txt](mnist.txt)
+
+### Sentiment Classification
+
+Number of training samples: 2000
+
+Number of epochs: 25
+
+Learning rate: 0.01
+
+Training log: [sentiment.txt](sentiment.txt)
+

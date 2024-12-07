@@ -12,9 +12,6 @@ from datasets import load_dataset
 
 EMBEDDING_SIZE = 50
 
-if 'HOME' not in os.environ:
-    os.environ['HOME'] = os.environ['USERPROFILE']
-
 
 def predictions_dataframe(predictions, sentences):
     df_predictions = pd.DataFrame(
